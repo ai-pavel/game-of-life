@@ -1,53 +1,52 @@
 # Conway's Game of Life
 
-A C# .NET 8 implementation of Conway's Game of Life with a HashSet-based infinite grid, pattern library, RLE import/export, and terminal animation.
+A Clojure implementation of Conway's Game of Life with a set-based infinite grid, pattern library, RLE import/export, and terminal animation.
 
 ## Project Structure
 
 ```
-src/
-  GameOfLife/          # Core library
-    Cell.cs            # Cell position record
-    Grid.cs            # Infinite grid with Conway's rules
-    Patterns.cs        # Well-known pattern library
-    RleParser.cs       # RLE format import/export
-    Renderer.cs        # Console terminal renderer
-  GameOfLife.Cli/      # Console application
-    Program.cs         # CLI entry point
-tests/
-  GameOfLife.Tests/    # xUnit tests
+src/game_of_life/
+  core.clj        # CLI entry point
+  grid.clj        # Infinite grid with Conway's rules
+  patterns.clj    # Well-known pattern library
+  rle.clj         # RLE format import/export
+  renderer.clj    # Console terminal renderer
+test/game_of_life/
+  grid_test.clj     # Grid logic tests
+  rle_test.clj      # RLE parser tests
+  patterns_test.clj # Pattern library tests
 ```
 
 ## Build
 
 ```bash
-dotnet build
+lein compile
 ```
 
 ## Run Tests
 
 ```bash
-dotnet test
+lein test
 ```
 
 ## CLI Usage
 
 ```bash
 # Animate a pattern in the terminal (Ctrl+C to stop)
-dotnet run --project src/GameOfLife.Cli -- run glider
-dotnet run --project src/GameOfLife.Cli -- run gosper --delay 50
+lein run run glider
+lein run run gosper --delay 50
 
 # Load and animate an RLE file
-dotnet run --project src/GameOfLife.Cli -- load pattern.rle
+lein run load pattern.rle
 
 # Export a pattern to RLE format
-dotnet run --project src/GameOfLife.Cli -- export glider -o glider.rle
+lein run export glider -o glider.rle
 
 # Advance a pattern by N generations and print result
-dotnet run --project src/GameOfLife.Cli -- step blinker -n 10
+lein run step blinker -n 10
 
 # List available patterns
-dotnet run --project src/GameOfLife.Cli -- patterns
+lein run patterns
 ```
 
 ## Patterns
