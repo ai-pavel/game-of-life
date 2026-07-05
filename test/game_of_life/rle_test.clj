@@ -1,7 +1,8 @@
 (ns game-of-life.rle-test
   (:require [clojure.test :refer :all]
             [game-of-life.rle :as rle]
-            [game-of-life.patterns :as patterns]))
+            [game-of-life.patterns :as patterns]
+            [clojure.string :as str]))
 
 (deftest parse-glider-test
   (testing "parses glider RLE"
@@ -71,3 +72,161 @@
           normalized (set (map (fn [[x y]] [(- x min-x) (- y min-y)]) original))]
       (is (= (count normalized) (count parsed)))
       (is (= normalized parsed)))))
+
+;; ============================================================
+;; Additional parse tests
+;; ============================================================
+
+(deftest parse-empty-rle-test
+  (testing "parses empty RLE (just terminator)"
+    (let [cells (rle/parse "!")]
+      (is (empty? cells)))))
+
+(deftest parse-single-live-cell-test
+  (testing "parses single live cell"
+    (let [cells (rle/parse "o!")]
+      (is (= 1 (count cells)))
+      (is (contains? cells [0 0])))))
+
+(deftest parse-single-dead-cell-then-live-test
+  (testing "parses dead cell followed by live cell"
+    (let [cells (rle/parse "bo!")]
+      (is (= 1 (count cells)))
+      (is (contains? cells [1 0])))))
+
+(deftest parse-large-run-count-test
+  (testing "parses large run counts"
+    (let [cells (rle/parse "x = 10, y = 1\n10o!")]
+      (is (= 10 (count cells)))
+      (is (contains? cells [0 0]))
+      (is (contains? cells [9 0])))))
+
+(deftest parse-mixed-dead-live-test
+  (testing "parses alternating dead and live cells"
+    ;; Pattern: .o.o.o  (3 live cells with gaps)
+    (let [cells (rle/parse "bobobo!")]
+      (is (= 3 (count cells)))
+      (is (contains? cells [1 0]))
+      (is (contains? cells [3 0]))
+      (is (contains? cells [5 0])))))
+
+(deftest parse-comments-only-test
+  (testing "comments followed by data"
+    (let [cells (rle/parse "#C comment\n#N name\nx = 3, y = 1\n3o!")]
+      (is (= 3 (count cells))))))
+
+(deftest parse-whitespace-in-data-test
+  (testing "whitespace in data is skipped"
+    (let [cells (rle/parse "x = 2, y = 2\n2o $\n2o!")]
+      (is (= 4 (count cells))))))
+
+(deftest parse-multiline-data-test
+  (testing "data split across multiple lines"
+    (let [cells (rle/parse "x = 3, y = 3\nbo$\n2bo$\n3o!")]
+      ;; This is a glider
+      (is (= 5 (count cells))))))
+
+(deftest parse-double-digit-run-test
+  (testing "double digit run count"
+    (let [cells (rle/parse "x = 15, y = 1\n15o!")]
+      (is (= 15 (count cells))))))
+
+(deftest parse-with-trailing-content-after-bang-test
+  (testing "content after ! terminator is ignored"
+    (let [cells (rle/parse "3o!extra stuff here")]
+      (is (= 3 (count cells))))))
+
+;; ============================================================
+;; Additional export tests
+;; ============================================================
+
+(deftest export-single-cell-test
+  (testing "export single cell"
+    (let [rle-str (rle/export #{[0 0]})]
+      (is (str/includes? rle-str "x = 1, y = 1"))
+      (is (str/includes? rle-str "o!")))))
+
+(deftest export-contains-terminator-test
+  (testing "exported RLE always ends with !"
+    (let [rle-str (rle/export patterns/blinker)]
+      (is (str/includes? rle-str "!")))))
+
+(deftest export-glider-test
+  (testing "export glider includes correct dimensions"
+    (let [rle-str (rle/export patterns/glider)]
+      (is (str/includes? rle-str "x = 3, y = 3")))))
+
+;; ============================================================
+;; Roundtrip tests for all patterns
+;; ============================================================
+
+(defn- normalize-cells
+  "Normalize cells so minimum x and y are 0."
+  [cells]
+  (if (empty? cells)
+    cells
+    (let [min-x (reduce min (map first cells))
+          min-y (reduce min (map second cells))]
+      (set (map (fn [[x y]] [(- x min-x) (- y min-y)]) cells)))))
+
+(deftest roundtrip-blinker-test
+  (testing "blinker roundtrip"
+    (let [original patterns/blinker
+          parsed (rle/parse (rle/export original))]
+      (is (= (normalize-cells original) parsed)))))
+
+(deftest roundtrip-pulsar-test
+  (testing "pulsar roundtrip"
+    (let [original patterns/pulsar
+          parsed (rle/parse (rle/export original))]
+      (is (= (normalize-cells original) parsed)))))
+
+(deftest roundtrip-lwss-test
+  (testing "lightweight spaceship roundtrip"
+    (let [original patterns/lightweight-spaceship
+          parsed (rle/parse (rle/export original))]
+      (is (= (normalize-cells original) parsed)))))
+
+(deftest roundtrip-gosper-test
+  (testing "gosper glider gun roundtrip"
+    (let [original patterns/gosper-glider-gun
+          parsed (rle/parse (rle/export original))]
+      (is (= (normalize-cells original) parsed)))))
+
+;; ============================================================
+;; export-to-file / parse-file tests
+;; ============================================================
+
+(deftest export-to-file-test
+  (testing "export-to-file creates a valid RLE file"
+    (let [tmp-file (str (System/getProperty "java.io.tmpdir") "/gol-test-" (System/currentTimeMillis) ".rle")]
+      (try
+        (rle/export-to-file patterns/blinker tmp-file)
+        (let [content (slurp tmp-file)]
+          (is (str/includes? content "x = 3, y = 1"))
+          (is (str/includes? content "!")))
+        (finally
+          (clojure.java.io/delete-file tmp-file true))))))
+
+(deftest parse-file-test
+  (testing "parse-file reads and parses an RLE file"
+    (let [tmp-file (str (System/getProperty "java.io.tmpdir") "/gol-parse-test-" (System/currentTimeMillis) ".rle")]
+      (try
+        (spit tmp-file "x = 3, y = 1, rule = B3/S23\n3o!")
+        (let [cells (rle/parse-file tmp-file)]
+          (is (= 3 (count cells)))
+          (is (contains? cells [0 0]))
+          (is (contains? cells [1 0]))
+          (is (contains? cells [2 0])))
+        (finally
+          (clojure.java.io/delete-file tmp-file true))))))
+
+(deftest export-to-file-and-parse-file-roundtrip-test
+  (testing "export-to-file then parse-file roundtrip"
+    (let [tmp-file (str (System/getProperty "java.io.tmpdir") "/gol-roundtrip-" (System/currentTimeMillis) ".rle")]
+      (try
+        (rle/export-to-file patterns/glider tmp-file)
+        (let [parsed (rle/parse-file tmp-file)]
+          (is (= (normalize-cells patterns/glider) parsed)))
+        (finally
+          (clojure.java.io/delete-file tmp-file true))))))
