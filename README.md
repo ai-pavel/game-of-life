@@ -1,7 +1,7 @@
 # Conway's Game of Life
 
-[![CI](https://github.com/ai-pavel/game-of-life/actions/workflows/ci.yml/badge.svg)](https://github.com/ai-pavel/game-of-life/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/ai-pavel/game-of-life/branch/main/graph/badge.svg)](https://codecov.io/gh/ai-pavel/game-of-life)
+[![CI](https://github.com/ai-pavel/petri/actions/workflows/ci.yml/badge.svg)](https://github.com/ai-pavel/petri/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/ai-pavel/petri/branch/main/graph/badge.svg)](https://codecov.io/gh/ai-pavel/petri)
 
 A Clojure implementation of Conway's Game of Life with a set-based infinite grid, pattern library, RLE import/export, and terminal animation.
 
