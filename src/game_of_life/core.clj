@@ -28,11 +28,21 @@
             result)
           (recur rest-args result))))))
 
+(defn- split-pattern-args
+  "Split args into a pattern name (defaulting to \"glider\") and the
+  remaining option args. A leading arg is only treated as a pattern
+  name when it does not start with \"-\"."
+  [args]
+  (let [first-arg (first args)]
+    (if (and first-arg (not (str/starts-with? first-arg "-")))
+      [first-arg (rest args)]
+      ["glider" args])))
+
 (defn run-command
   "Animate a pattern in the terminal."
   [args]
-  (let [pattern-name (or (first args) "glider")
-        opts (parse-opts (rest args)
+  (let [[pattern-name opt-args] (split-pattern-args args)
+        opts (parse-opts opt-args
                          {"--delay" {:key :delay}
                           "-d"      {:key :delay}
                           "--generations" {:key :generations}
@@ -79,8 +89,8 @@
 (defn export-command
   "Export a pattern to RLE format."
   [args]
-  (let [pattern-name (or (first args) "glider")
-        opts (parse-opts (rest args)
+  (let [[pattern-name opt-args] (split-pattern-args args)
+        opts (parse-opts opt-args
                          {"--output" {:key :output}
                           "-o"       {:key :output}})
         pattern (patterns/get-by-name pattern-name)]
@@ -96,8 +106,8 @@
 (defn step-command
   "Advance a pattern by N generations and print result."
   [args]
-  (let [pattern-name (or (first args) "glider")
-        opts (parse-opts (rest args)
+  (let [[pattern-name opt-args] (split-pattern-args args)
+        opts (parse-opts opt-args
                          {"--steps" {:key :steps}
                           "-n"      {:key :steps}})
         steps (parse-int (:steps opts) 1)
