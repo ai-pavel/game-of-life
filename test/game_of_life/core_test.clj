@@ -249,3 +249,32 @@
                        (binding [*err* *out*]
                          (core/-main "run" "nonexistent")))]
       (is (str/includes? err-output "Unknown pattern: nonexistent")))))
+
+;; ============================================================
+;; run-command / load-command success path tests
+;; ============================================================
+
+(deftest run-command-known-pattern-test
+  (testing "run-command with a known pattern animates and prints Stopped."
+    (let [output (with-out-str
+                   (core/run-command ["blinker" "--generations" "0" "--delay" "1"]))]
+      (is (str/includes? output "Stopped.")))))
+
+(deftest run-command-default-glider-test
+  (testing "run-command defaults to glider when no pattern given"
+    (let [output (with-out-str
+                   (core/run-command ["--generations" "0" "--delay" "1"]))]
+      (is (str/includes? output "Stopped.")))))
+
+(deftest load-command-valid-file-test
+  (testing "load-command with a valid RLE file loads and animates"
+    (let [tmp-file (str (System/getProperty "java.io.tmpdir")
+                        "/gol-load-test-" (System/currentTimeMillis) ".rle")]
+      (try
+        (spit tmp-file "x = 3, y = 1, rule = B3/S23\n3o!")
+        (let [output (with-out-str
+                       (core/load-command [tmp-file "--generations" "0" "--delay" "1"]))]
+          (is (str/includes? output "Loaded 3 cells from"))
+          (is (str/includes? output "Stopped.")))
+        (finally
+          (clojure.java.io/delete-file tmp-file true))))))

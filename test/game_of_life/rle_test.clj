@@ -230,3 +230,43 @@
           (is (= (normalize-cells patterns/glider) parsed)))
         (finally
           (clojure.java.io/delete-file tmp-file true))))))
+
+;; ============================================================
+;; Export run-length encoding tests (exercise run-counting loop)
+;; ============================================================
+
+(deftest export-run-count-2-test
+  (testing "export emits a count prefix for runs of 2+ same-state cells"
+    (let [cells #{[0 0] [1 0] [2 0] [3 0]}
+          rle-str (rle/export cells)]
+      (is (str/includes? rle-str "4o")))))
+
+(deftest export-run-count-3-dead-then-alive-test
+  (testing "export emits count for a run of dead cells followed by alive cells"
+    (let [cells #{[3 0] [4 0] [5 0]}
+          rle-str (rle/export cells)]
+      ;; 3 dead, then 3 alive
+      (is (str/includes? rle-str "3o")))))
+
+(deftest export-single-row-no-trailing-dollar-test
+  (testing "export of a single row has no trailing $"
+    (let [rle-str (rle/export patterns/blinker)]
+      ;; blinker is 1 row; no $ should appear before !
+      (is (re-find #"3o!" rle-str)))))
+
+(deftest export-multi-row-with-dead-gap-test
+  (testing "export emits $ between rows and omits trailing dead cells"
+    (let [cells #{[0 0] [0 2]}
+          rle-str (rle/export cells)]
+      ;; row 0: o, row 1: empty (just $), row 2: o
+      (is (str/includes? rle-str "$")))))
+
+(deftest parse-only-terminator-no-header-test
+  (testing "parses just a bang with no header and no data"
+    (let [cells (rle/parse "!")]
+      (is (empty? cells)))))
+
+(deftest parse-data-without-terminator-test
+  (testing "parses data that ends without a bang (relies on empty chars)"
+    (let [cells (rle/parse "3o")]
+      (is (= 3 (count cells))))))

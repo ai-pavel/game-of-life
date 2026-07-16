@@ -172,3 +172,26 @@
                    (renderer/animate #{} :generations 2 :delay-ms 1 :width 5 :height 5))]
       (is (str/includes? output "Generation: 0"))
       (is (str/includes? output "Population: 0")))))
+
+;; ============================================================
+;; Large-grid render tests (exercise doseq iteration forms)
+;; ============================================================
+
+(deftest render-large-grid-test
+  (testing "render a 20x10 grid with scattered cells exercises many doseq iterations"
+    (let [cells #{[0 0] [5 3] [19 9] [10 5]}
+          result (renderer/render cells {:width 20 :height 10 :offset-x 0 :offset-y 0})]
+      (is (= 10 (count (str/split-lines result))))
+      (is (= 20 (count (first (str/split-lines result))))))))
+
+(deftest render-all-dead-large-grid-test
+  (testing "render a large all-dead grid exercises the dead-char branch repeatedly"
+    (let [result (renderer/render #{} {:width 15 :height 8 :offset-x 0 :offset-y 0})]
+      (is (= 8 (count (str/split-lines result))))
+      (is (not (str/includes? result (str alive-char)))))))
+
+(deftest render-full-alive-grid-test
+  (testing "render a grid full of alive cells exercises the alive-char branch"
+    (let [cells (set (for [x (range 5) y (range 3)] [x y]))
+          result (renderer/render cells {:width 5 :height 3 :offset-x 0 :offset-y 0})]
+      (is (str/includes? result (str alive-char))))))
